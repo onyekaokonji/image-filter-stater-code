@@ -1,4 +1,4 @@
-import express from 'express';
+import express, {Request, Response} from 'express';
 import bodyParser from 'body-parser';
 import {filterImageFromURL, deleteLocalFiles} from './util/util';
 
@@ -11,16 +11,33 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   const port = process.env.PORT || 8082;
   
   // Use the body parser middleware for post requests
-  app.get( "/filteredimage/", async ( req, res ) => {
-    let {image_url} = req.query;
-    if (!image_url) {
-        res.status(422).send('Invalid Image URL');
+  app.get("/filteredimage/", async ( req: Request, res: Response ) => {
+    try {
+      let { image_url } = req.query;
+      if (!image_url) {
+        return res.status(400)
+          .send('Image url is required')
+      }
+      const filteredImage = await filterImageFromURL(image_url.toString())
+      res.status(200)
+        .sendFile(filteredImage)
+      res.on('finish', () => deleteLocalFiles([filteredImage]));
+    } catch (error) {
+      return res.status(500)
+        .send('Unable to download image')
     }
-
-    let filteredPath = await filterImageFromURL(image_url);
-    res.status(200).sendFile(filteredPath, () => {deleteLocalFiles([filteredPath]);
-    });
   });
+
+//   app.get( "/filteredimage/", async ( req : Request, res : Response ) => {
+//     let { image_url }  = req.query;
+//     if (!image_url) {
+//         res.status(422).send('Invalid Image URL');
+//     }
+//
+//     let filteredPath = await filterImageFromURL(image_url);
+//     res.status(200).sendFile(filteredPath, () => {deleteLocalFiles([filteredPath]);
+//     });
+//   });
 
   // @TODO1 IMPLEMENT A RESTFUL ENDPOINT
   // GET /filteredimage?image_url={{URL}}
